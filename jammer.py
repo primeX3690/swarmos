@@ -43,3 +43,7 @@ def update_signal(drone, dt):
 
     if drone.signal_strength <= 0 and drone.state == 'flying':
         drone.start_rth()
+
+
+
+        

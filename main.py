@@ -26,7 +26,29 @@ from mesh_comms import validate_chain, hacker_inject_fake_command
 from jammer import create_jammer_zone, update_signal
 
 
-jammer_entity = create_jammer_zone()
+# jammer_entity = create_jammer_zone()
+
+jammer_zone = Entity(
+    model='sphere',
+    color=color.rgba(1,0,0,0.2),
+    scale=10,
+    position=(0,0,0)
+)
+
+jammer_zone.render_queue = 1
+
+jammer_level = Text(
+
+text = 'Jammer_Zone',
+position=(0,0.6,0),
+scale = 5,
+color=color.black,
+origin=(0,0),
+parent=jammer_zone,
+billboard=True
+)
+
+
 
 
 def show_notification(message):
@@ -288,10 +310,28 @@ def update():
         if d.state == 'flying':
             update_signal(d, time.dt)
 
+        # if not d.compromised and not validate_chain(d.ledger):
+        #     d.compromised = True
+        #     d.color = color.rgba(1,0,0,0.3)
+        #     d.label.text = f"D{d.id} | COMPROMISED - ISOLATED"
+
+
         if not d.compromised and not validate_chain(d.ledger):
             d.compromised = True
-            d.color = color.rgba(255, 0, 0, 255)
+            d.color = color.rgba(1, 0, 0, 0.3)
             d.label.text = f"D{d.id} | COMPROMISED - ISOLATED"
+            
+        # ✈️ [यहाँ बिल्कुल नीचे यह नया कोड जोड़ें]
+        if d.state == 'RTH':
+            # ड्रोन को उसके घर (Takeoff Position) की तरफ का रास्ता दिखाएं
+            direction = (d.takeoff_position - d.position).normalized()
+            # ड्रोन को उस रास्ते पर आगे बढ़ाएं
+            d.position += direction * time.dt * d.speed
+            
+            # अगर ड्रोन अपने टेकऑफ़ पॉइंट के बहुत पास पहुँच जाए
+            if (d.position - d.takeoff_position).length() < 0.2:
+                d.state = 'landed'
+                d.speed = 0  # लैंड होने के बाद ड्रोन को रोक दें
 
                 
 
@@ -432,5 +472,16 @@ def input(key):
             hacker_inject_fake_command(victim)
             show_notification(f"J — Simulated Hack on D{victim.id}")  
 
+
+        alert = Text(
+        text="Jammer area activated",
+        position=(-0.35,0.4),
+        scale=2,
+        color=color.red,
+        background=True
+
+        )    
+
+        destroy(alert,delay=3)
               
 app.run()
