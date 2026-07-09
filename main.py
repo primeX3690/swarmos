@@ -22,6 +22,12 @@ from formation import get_formation_offsets, rotate_offset, move_toward_formatio
 from obstacle import create_obstacle, avoid_obstacle
 from threat import create_threat, flee_threat, surround_threat
 
+from mesh_comms import validate_chain, hacker_inject_fake_command
+from jammer import create_jammer_zone, update_signal
+
+
+jammer_entity = create_jammer_zone()
+
 
 def show_notification(message):
     notification_label.text = message
@@ -192,8 +198,6 @@ def update():
 
     
 
-
-
     if formation_mode:
         if not formation_offsets or len(formation_offsets) != len(drones):
             formation_offsets = get_formation_offsets(current_formation, len(drones))
@@ -276,6 +280,20 @@ def update():
                     color=color.rgba(0, 255, 100, 120),
                 )
                 comm_lines.append(line)
+
+
+
+
+    for d in drones:
+        if d.state == 'flying':
+            update_signal(d, time.dt)
+
+        if not d.compromised and not validate_chain(d.ledger):
+            d.compromised = True
+            d.color = color.rgba(255, 0, 0, 255)
+            d.label.text = f"D{d.id} | COMPROMISED - ISOLATED"
+
+                
 
     if drones:
         # longest = max(drones, key=lambda d: len(d.ledger))
@@ -404,4 +422,15 @@ def input(key):
             d.start_landing()
         show_notification("L — Landing Sequence Initiated")
 
+
+
+
+    if key == 'j':
+        flying_drones = [d for d in drones if d.state == 'flying' and not d.compromised]
+        if flying_drones:
+            victim = random.choice(flying_drones)
+            hacker_inject_fake_command(victim)
+            show_notification(f"J — Simulated Hack on D{victim.id}")  
+
+              
 app.run()

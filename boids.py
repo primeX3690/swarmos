@@ -30,7 +30,7 @@ def apply_boids_rules(drone, all_drones):
     coh_count = 0
 
     for other in all_drones:
-        if other.id == drone.id:
+        if other.id == drone.id or other.compromised:
             continue
 
         dist = (drone.position - other.position).length()

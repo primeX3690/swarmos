@@ -47,3 +47,34 @@ def sync_chains(drone_a, drone_b):
     elif len(drone_a.ledger) > len(drone_b.ledger):
         drone_b.ledger = list(drone_a.ledger)
         drone_b.mission_data = dict(drone_a.mission_data)
+
+
+
+def validate_chain(chain):
+    """Poori chain ki hash-integrity verify karta hai — agar koi block
+    tamper hua hai (hash match nahi karta), chain invalid hai."""
+    for i in range(1, len(chain)):
+        block = chain[i]
+        prev = chain[i - 1]
+        if block['prev_hash'] != prev['hash']:
+            return False
+        if hash_block(block) != block['hash']:
+            return False
+    return True
+
+
+def hacker_inject_fake_command(drone):
+    """
+    Simulated hacker attack — ek corrupted/unauthorized block force-inject
+    karta hai jiska hash intentionally mismatch karega, taaki mesh isse
+    consensus se pakad sake.
+    """
+    last = drone.ledger[-1]
+    fake_block = {
+        'index': last['index'] + 1,
+        'timestamp': 0,
+        'event': 'UNAUTHORIZED_CMD',
+        'prev_hash': last['hash'],
+    }
+    fake_block['hash'] = 'TAMPERED0000'  # jaan-bujh ke galat hash — real cheez detect karegi
+    drone.ledger.append(fake_block)        

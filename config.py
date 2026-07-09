@@ -54,4 +54,9 @@ COMMS_RADIUS = 8.0      # kitni door tak drones data share kar sakte hain
 SYNC_INTERVAL = 20      # kitne frames baad sync check ho (performance ke liye)
 
 
-
+JAMMER_POSITION = (-12, 3, -12)
+JAMMER_RADIUS = 7.0
+FREQUENCIES = [1, 2, 3, 4, 5]
+SIGNAL_DROP_RATE = 35      # per second jab jammer zone ke andar ho
+SIGNAL_RECOVERY_RATE = 25  # per second jab bahar ho
+HOP_SUCCESS_CHANCE = 0.6   # frequency hop ka chance safe channel milne ka
