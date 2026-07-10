@@ -5,6 +5,7 @@ from config import (
     SIGNAL_DROP_RATE, SIGNAL_RECOVERY_RATE, HOP_SUCCESS_CHANCE,
 )
 
+jammer_active = False
 
 def create_jammer_zone():
     """Enemy jammer tower — red pulsing sphere jo signal degrade karta hai."""
@@ -16,12 +17,19 @@ def create_jammer_zone():
     )
 
 
-def update_signal(drone, dt):
+def update_signal(drone, dt, jammer_active):
     """
     Har frame drone ka signal update karta hai. Jammer zone ke andar signal
     girta hai; agar drone frequency-hop kar leta hai to bach jaata hai,
     warna signal 0 pe pahunchte hi RTH trigger hota hai.
     """
+    if not jammer_active:
+        drone.signal_strength = 100
+        return
+
+
+
+
     dist = (drone.position - Vec3(*JAMMER_POSITION)).length()
 
     if dist < JAMMER_RADIUS:

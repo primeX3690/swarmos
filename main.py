@@ -32,12 +32,13 @@ jammer_zone = Entity(
     model='sphere',
     color=color.rgba(1,0,0,0.2),
     scale=10,
-    position=(0,0,0)
+    position=(0,0,0),
+    enabled=False
 )
 
 jammer_zone.render_queue = 1
 
-jammer_level = Text(
+jammer_level = Entity(
 
 text = 'Jammer_Zone',
 position=(0,0.6,0),
@@ -45,10 +46,11 @@ scale = 5,
 color=color.black,
 origin=(0,0),
 parent=jammer_zone,
-billboard=True
+billboard=True,
+enabled=False
 )
 
-
+jammer_active = False
 
 
 def show_notification(message):
@@ -308,7 +310,7 @@ def update():
 
     for d in drones:
         if d.state == 'flying':
-            update_signal(d, time.dt)
+            update_signal(d, time.dt, jammer_active)
 
         # if not d.compromised and not validate_chain(d.ledger):
         #     d.compromised = True
@@ -364,10 +366,10 @@ if heatmap_on:
 
 def input(key):
     global current_mode, formation_mode, current_formation, formation_offsets
-    global obstacle_on, threat_state, heatmap_on
+    global obstacle_on, threat_state, heatmap_on, jammer_active
 
 
-    if key in ('m', '1', '2', '3', 'o', 't', 'y'):
+    if key in ('m', '1', '2', '3', 'o', 't', 'y', 'h', 'l', 'j'):
         reactivated_count = 0
         for d in drones:
             if d.state in ('landed', 'landing'):
@@ -465,7 +467,11 @@ def input(key):
 
 
 
-    if key == 'j':
+    if key == 'j' and not jammer_active:
+        jammer_active = True
+        jammer_zone.enabled = True
+        jammer_level.enabled = True
+
         flying_drones = [d for d in drones if d.state == 'flying' and not d.compromised]
         if flying_drones:
             victim = random.choice(flying_drones)
