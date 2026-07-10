@@ -58,9 +58,6 @@ Most swarm demos show flocking. Few demonstrate what happens when the mission is
 - **Core Algorithms:** Boids flocking, rule-based individual agents, formation-offset geometry with patrol-path rotation, SHA-256 hash-chaining for the mission ledger
 - Built and tested on consumer hardware (Ryzen 3, 8GB RAM) — no GPU or cloud compute required
 
-## Demo
-
-[Video link here]
 
 ## Run It Yourself
 
