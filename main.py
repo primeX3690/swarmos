@@ -1,8 +1,17 @@
+from physics import WindField, apply_gravity_correction, apply_sensor_noise, drain_battery
+from config import WIND_CHANGE_INTERVAL, BATTERY_DRAIN_RATE, BATTERY_LOW_THRESHOLD
+from rl_agent import apply_rl_behavior
+from mesh_comms import sync_dags
+from network_emulation import NetworkEmulator
+from config import NETWORK_LATENCY_MIN, NETWORK_LATENCY_MAX, PACKET_LOSS_CHANCE
+from boids import apply_stigmergy_avoidance
+
+
 from ursina import (
     Ursina, Entity, EditorCamera, DirectionalLight, AmbientLight,
     Text, color, camera, window, time, Vec3, destroy,
 )
-from heatmap import create_heatmap_grid, update_heatmap
+from heatmap import GRID_RESOLUTION, create_heatmap_grid, update_heatmap
 from mesh_comms import sync_chains, add_block
 from config import COMMS_RADIUS, SYNC_INTERVAL
 from ursina import Entity
@@ -22,8 +31,12 @@ from formation import get_formation_offsets, rotate_offset, move_toward_formatio
 from obstacle import create_obstacle, avoid_obstacle
 from threat import create_threat, flee_threat, surround_threat
 
-from mesh_comms import validate_chain, hacker_inject_fake_command
+from mesh_comms import validate_chain, hacker_inject_fake_dag_node
 from jammer import create_jammer_zone, update_signal
+
+
+
+network = NetworkEmulator()
 
 
 # jammer_entity = create_jammer_zone()
@@ -119,6 +132,7 @@ threat_entity.enabled = False
 drones = [Drone(i) for i in range(SWARM_SIZE)]
 mission_start_time = pytime.time()
 last_known_elapsed = 0
+wind = WindField()
 
 # ------------------------------------------------
 # State
@@ -167,6 +181,16 @@ count_label = Text(
 )
 
 
+
+security_label = Text(
+    text="Compromised Units: 0",
+    position=(-0.85, 0.20),
+    scale=0.75,
+    color=color.red,
+)
+
+
+
 status_label = Text(
     text="Obstacle: OFF | Threat: OFF",
     position=(-0.85, 0.32),
@@ -182,6 +206,15 @@ ledger_label = Text(
     position=(-0.85, 0.28),
     scale=0.75,
     color=color.lime,
+)
+
+
+
+network_label = Text(
+    text="Network: 100% reliable",
+    position=(-0.85, 0.24),
+    scale=0.75,
+    color=color.orange,
 )
 
 
@@ -211,6 +244,11 @@ def update():
     global formation_offsets, patrol_angle
     global sync_timer, comm_lines, mission_start_time , heatmap_on, last_known_elapsed
 
+
+    wind.update(time.dt, WIND_CHANGE_INTERVAL)
+
+
+
 # Threat alert — pulsing effect using sin wave
     if threat_state != 'off':
         pulse = abs(math.sin(time.dt * 5 + patrol_angle * 3))
@@ -236,7 +274,7 @@ def update():
 
         for i, d in enumerate(drones):
             if d.state != 'flying':
-                d.move(time.dt)
+                d.move(time.dt, wind.get_force())
                 continue
 
             rx, rz = rotate_offset(formation_offsets[i], heading)
@@ -253,14 +291,33 @@ def update():
 
         for d in drones:
             if d.state != 'flying':
-                d.move(time.dt)
+                d.move(time.dt , wind.get_force())
                 continue
 
             if current_mode == 'A':
                 apply_boids_rules(d, drones)
+                apply_stigmergy_avoidance(d, heatmap_visits, heatmap_cell_size, GRID_RESOLUTION)
                 d.color = color.rgba(*MODE_A_COLOR)
+            # else:
+            #     apply_individual_behavior(d)
+            #     d.color = color.rgba(*MODE_B_COLOR)
+
+
             else:
                 apply_individual_behavior(d)
+                d.color = color.rgba(*MODE_B_COLOR)
+
+                threat_pos_vec = Vec3(*THREAT_POSITION) if threat_state != 'off' else None
+                obstacle_pos_vec = Vec3(*OBSTACLE_POSITION) if obstacle_on else None
+
+                col = int((d.position.x / heatmap_cell_size) + 5)
+                row = int((d.position.z / heatmap_cell_size) + 5)
+                visited_new = heatmap_visits.get((row, col), 0) == 0
+
+                apply_rl_behavior(
+                    d, threat_pos_vec, obstacle_pos_vec,
+                    threat_state != 'off', obstacle_on, visited_new
+                )
                 d.color = color.rgba(*MODE_B_COLOR)
 
             if obstacle_on:
@@ -270,11 +327,13 @@ def update():
             elif threat_state == 'surround':
                 surround_threat(d, Vec3(*THREAT_POSITION), drones.index(d), len(drones))
 
-            d.move(time.dt)
+            d.move(time.dt , wind.get_force())
 
 
  # --- Mesh sync: paas-paas ke drones apna mission ledger replicate karte hain ---
     global sync_timer, comm_lines
+
+    do_sync = True
 
     # Purani comm lines hata do (har frame refresh)
     for line in comm_lines:
@@ -287,8 +346,21 @@ def update():
         for i in range(len(drones)):
             for j in range(i + 1, len(drones)):
                 dist = (drones[i].position - drones[j].position).length()
+                # if dist < COMMS_RADIUS:
+                    # sync_chains(drones[i], drones[j])
+
+
                 if dist < COMMS_RADIUS:
-                    sync_chains(drones[i], drones[j])
+                #    if do_sync:
+                #        sync_dags(drones[i], drones[j])
+
+                     if do_sync:
+                        network.request_sync(
+                        drones[i], drones[j],
+                        NETWORK_LATENCY_MIN, NETWORK_LATENCY_MAX, PACKET_LOSS_CHANCE
+                    )
+
+
 
     # Live visual: jo drones paas hain (COMMS_RADIUS ke andar), unke beech line dikhao
     for i in range(len(drones)):
@@ -308,20 +380,40 @@ def update():
 
 
 
+    # for d in drones:
+    #     if d.state == 'flying':
+    #         update_signal(d, time.dt, jammer_active)
+    #     if not d.compromised and not validate_chain(d.ledger):
+    #         d.compromised = True
+    #         d.color = color.rgba(1, 0, 0, 0.3)
+    #         d.label.text = f"D{d.id} | COMPROMISED - ISOLATED"
+
+
+
+
+
     for d in drones:
         if d.state == 'flying':
             update_signal(d, time.dt, jammer_active)
 
-        # if not d.compromised and not validate_chain(d.ledger):
+        # if not d.compromised and not d.dag.validate_full_dag():
         #     d.compromised = True
-        #     d.color = color.rgba(1,0,0,0.3)
+        #     d.color = color.rgba(255, 0, 0, 255)
         #     d.label.text = f"D{d.id} | COMPROMISED - ISOLATED"
 
 
-        if not d.compromised and not validate_chain(d.ledger):
+
+
+
+        if not d.compromised and not d.dag.validate_full_dag():
             d.compromised = True
-            d.color = color.rgba(1, 0, 0, 0.3)
+            d.color = color.rgba(255, 0, 0, 255)
+            d.scale = (0.6, 0.25, 0.9)
             d.label.text = f"D{d.id} | COMPROMISED - ISOLATED"
+
+
+
+
             
         # ✈️ [यहाँ बिल्कुल नीचे यह नया कोड जोड़ें]
         if d.state == 'RTH':
@@ -343,15 +435,25 @@ def update():
         # elapsed = round(pytime.time() - mission_start_time, 1)
         # ledger_label.text = f"Mesh Ledger: {len(longest.ledger)} blocks | Hash: {last_hash} | T+{elapsed}s" 
         # 
-          longest = max(drones, key=lambda d: len(d.ledger))
-          last_hash = longest.ledger[-1]['hash']
-          any_flying = any(d.state == 'flying' for d in drones)
+        #   longest = max(drones, key=lambda d: len(d.ledger))
+        #   last_hash = longest.ledger[-1]['hash']
+
+
+        largest_dag = max(drones, key=lambda d: d.dag.size())
+        dag_valid = largest_dag.dag.validate_full_dag()
+        status = "VALID" if dag_valid else "TAMPERED"
+
+
+
+
+        any_flying = any(d.state == 'flying' for d in drones)
         #   elapsed = 0
-          if any_flying:
-              last_known_elapsed = round(pytime.time()-mission_start_time,1)
-          elapsed = last_known_elapsed
+    if any_flying:
+            last_known_elapsed = round(pytime.time()-mission_start_time,1)
+            elapsed = last_known_elapsed
             # elapsed = round(pytime.time() - mission_start_time, 1)
-          ledger_label.text = f"Mesh Ledger: {len(longest.ledger)} blocks | Hash: {last_hash} | T+{elapsed}s"  
+            #   ledger_label.text = f"Mesh Ledger: {len(longest.ledger)} blocks | Hash: {last_hash} | T+{elapsed}s" 
+            ledger_label.text = f"DAG Ledger: {largest_dag.dag.size()} nodes | Status: {status} | T+{elapsed}s" 
          
 
 
@@ -361,15 +463,26 @@ if heatmap_on:
         for d in drones:
             update_heatmap(d.position, heatmap_cells, heatmap_visits, heatmap_cell_size)
 
+            
+        for d in drones:
+            drain_battery(d,time.dt , BATTERY_DRAIN_RATE)
+            if d.battery <= bATTERY_LOW_THRESHOLD and d.state =='flying':
+                d.start_rth()
 
 
+
+
+        network.process(sync_dags)
+        network_label.text = f"Network: {network.get_reliability_percent()}% reliable | Pending: {len(network.pending)}"        
+
+        compromised_count = sum(1 for d in drones if d.compromised)
+        security_label.text = f"Compromised Units: {compromised_count}"
 
 def input(key):
     global current_mode, formation_mode, current_formation, formation_offsets
     global obstacle_on, threat_state, heatmap_on, jammer_active
 
-
-    if key in ('m', '1', '2', '3', 'o', 't', 'y', 'h', 'l', 'j'):
+    if key in ('m', '1', '2', '3', '4' , 'o', 't', 'y', 'h', 'l', 'j' , 'g'):
         reactivated_count = 0
         for d in drones:
             if d.state in ('landed', 'landing'):
@@ -377,9 +490,6 @@ def input(key):
                 reactivated_count += 1
         if reactivated_count > 0:
             show_notification(f"Reactivating {reactivated_count} drones")
-
-
-
 
     if key == 'm':
         formation_mode = False
@@ -418,6 +528,14 @@ def input(key):
         mode_label.color = color.yellow
         show_notification("3 — V-Formation Engaged")
 
+    if key == '4':
+        formation_mode = True
+        current_formation = 'expanding_square'
+        formation_offsets = []
+        mode_label.text = "SEARCH — Expanding Square (Patrolling)"
+        mode_label.color = color.yellow
+        show_notification("4 — Expanding Square Formation Engaged")
+
     if key == 'o':
         obstacle_on = not obstacle_on
         obstacle_entity.enabled = obstacle_on
@@ -439,17 +557,17 @@ def input(key):
     if key == 'k':
         if len(drones) > 1:
             victim = random.choice(drones)
-            add_block(victim.ledger, 'DRONE_LOST')
+            victim.dag.add_event('DRONE_LOST')
             nearest = min(
                 (d for d in drones if d.id != victim.id),
                 key=lambda d: (d.position - victim.position).length()
             )
-            sync_chains(victim, nearest)
+            sync_dags(victim, nearest)
             drones.remove(victim)
             destroy(victim)
             formation_offsets = []
             count_label.text = f"Active Drones: {len(drones)}"
-            show_notification("K — Drone Lost: Data Replicated to Swarm")
+            show_notification("K — Drone Lost: DAG Data Merged to Swarm")
 
     if key == 'h':
         heatmap_on = not heatmap_on
@@ -464,9 +582,7 @@ def input(key):
             d.start_landing()
         show_notification("L — Landing Sequence Initiated")
 
-
-
-
+    # --- 'j' की का ब्लॉक अब सही और स्वतंत्र है ---
     if key == 'j' and not jammer_active:
         jammer_active = True
         jammer_zone.enabled = True
@@ -475,19 +591,24 @@ def input(key):
         flying_drones = [d for d in drones if d.state == 'flying' and not d.compromised]
         if flying_drones:
             victim = random.choice(flying_drones)
-            hacker_inject_fake_command(victim)
-            show_notification(f"J — Simulated Hack on D{victim.id}")  
-
+            hacker_inject_fake_dag_node(victim)
+            show_notification(f"J — Simulated Hack on D{victim.id}")
 
         alert = Text(
-        text="Jammer area activated",
-        position=(-0.35,0.4),
-        scale=2,
-        color=color.red,
-        background=True
-
+            text="Jammer area activated",
+            position=(-0.35, 0.4),
+            scale=2,
+            color=color.red,
+            background=True
         )    
+        destroy(alert, delay=3)
 
-        destroy(alert,delay=3)
+    # --- 'g' की का ब्लॉक अब बाहर है और सही तरीके से काम करेगा ---
+    if key == 'g':
+        new_gnss_state = not drones[0].gnss_denied if drones else False
+        for d in drones:
+            d.gnss_denied = new_gnss_state
+        status_label.text = f"Obstacle: {'ON' if obstacle_on else 'OFF'} | Threat: {threat_state.upper()} | GNSS-Denied: {'ON' if new_gnss_state else 'OFF'}"
+        show_notification("G — GNSS-Denied Navigation " + ("ACTIVATED (drones drifting)" if new_gnss_state else "Deactivated"))
               
 app.run()

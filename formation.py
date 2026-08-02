@@ -1,71 +1,3 @@
-# from ursina import Vec3
-# import math
-# from config import DRONE_SPEED
-
-
-# def get_grid_positions(count, spacing=2.5):
-#     """Drones ko ek grid (rows x cols) mein arrange karne ke target positions."""
-#     positions = []
-#     cols = math.ceil(math.sqrt(count))
-#     for i in range(count):
-#         row = i // cols
-#         col = i % cols
-#         x = (col - cols / 2) * spacing
-#         z = (row - cols / 2) * spacing
-#         positions.append(Vec3(x, 4, z))
-#     return positions
-
-
-# def get_circle_positions(count, radius=8):
-#     """Drones ko circle formation mein arrange karne ke target positions."""
-#     positions = []
-#     for i in range(count):
-#         angle = (2 * math.pi / count) * i
-#         x = math.cos(angle) * radius
-#         z = math.sin(angle) * radius
-#         positions.append(Vec3(x, 4, z))
-#     return positions
-
-
-# # def get_v_formation_positions(count, spacing=2.0):
-# #     """Drones ko V (arrow) formation mein arrange karne ke target positions."""
-# #     positions = []
-# #     for i in range(count):
-# #         side = 1 if i % 2 == 0 else -1
-# #         depth = (i // 2 + 1) * spacing
-# #         x = side * depth * 0.6
-# #         z = -depth
-# #         positions.append(Vec3(x, 4, z))
-# #     return positions
-
-# def get_v_formation_positions(count, spacing=2.0):
-#     """Drones ko V (arrow) formation mein arrange karna — ek leader aage, baaki dono taraf."""
-#     positions = []
-#     positions.append(Vec3(0, 4, 2))  # leader — sabse aage tip pe
-
-#     remaining = count - 1
-#     for i in range(remaining):
-#         side = 1 if i % 2 == 0 else -1
-#         depth = (i // 2 + 1)
-#         x = side * depth * spacing * 0.7
-#         z = -depth * spacing * 0.6
-#         positions.append(Vec3(x, 4, z))
-
-#     return positions
-
-
-# def move_toward_formation(drone, target_position):
-#     """Drone ko uski target formation position ki taraf smoothly le jaana."""
-#     direction = target_position - drone.position
-#     dist = direction.length()
-
-#     if dist > 0.3:
-#         direction = direction.normalized()
-#         drone.velocity = direction * DRONE_SPEED
-#     else:
-#         drone.velocity = Vec3(0, 0, 0)  # position pe pahunch gaya, ruk jao
-
-
 
 
 from ursina import Vec3
@@ -111,6 +43,34 @@ def get_formation_offsets(shape, count):
             z = -depth * spacing * 0.6
             offsets.append((x, z))
 
+
+
+
+
+    
+            
+
+    elif shape == 'expanding_square':
+        spacing = 2.0
+        offsets.append((0, 0))
+        for i in range(1, count):
+            side = i % 4
+            dist = (i // 4 + 1) * spacing
+            if side == 0:
+                offsets.append((dist, 0))
+            elif side == 1:
+                offsets.append((dist, dist))
+            elif side == 2:
+                offsets.append((-dist, dist))
+            else:
+                offsets.append((-dist, -dist))
+
+ 
+
+        
+
+    
+
     return offsets
 
 
@@ -125,17 +85,6 @@ def rotate_offset(offset, heading_rad):
     rz = ox * sin_h + oz * cos_h
     return rx, rz
 
-
-# def move_toward_formation(drone, target_position):
-#     """Drone ko uski current target formation position ki taraf smoothly le jaana."""
-#     direction = target_position - drone.position
-#     dist = direction.length()
-
-#     if dist > 0.2:
-#         direction = direction.normalized()
-#         drone.velocity = direction * DRONE_SPEED
-#     else:
-#         drone.velocity = Vec3(0, 0, 0)
 
 
 

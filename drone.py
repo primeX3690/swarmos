@@ -1,6 +1,4 @@
 
-
-
 from ursina import Entity, Vec3, color, Text
 import random
 import math
@@ -12,11 +10,12 @@ from config import (
     MODE_A_COLOR,
     TAKEOFF_SPEED,
     LANDING_SPEED,
+    GNSS_DRIFT_RATE,
 )
 
 
 class Drone(Entity):
-    def __init__(self, drone_id):
+    def __init__(self, drone_id ):
         spawn_x = random.uniform(-GROUND_SIZE / 2, GROUND_SIZE / 2)
         spawn_z = random.uniform(-GROUND_SIZE / 2, GROUND_SIZE / 2)
 
@@ -28,6 +27,13 @@ class Drone(Entity):
         )
 
         self.id = drone_id
+        self.ledger  = []
+
+        self.gnss_denied = False
+        self.target_flight_height = random.uniform(FLIGHT_HEIGHT_MIN, FLIGHT_HEIGHT_MAX)
+        self.estimated_position = Vec3(spawn_x, self.target_flight_height, spawn_z)
+
+
 
         angle = random.uniform(0, 360)
         self.velocity = Vec3(
@@ -37,15 +43,22 @@ class Drone(Entity):
         ) * DRONE_SPEED
 
         self.decision_timer = random.randint(0, 60)
+        self.battery = 100.0
 
         self.target_flight_height = random.uniform(FLIGHT_HEIGHT_MIN, FLIGHT_HEIGHT_MAX)
         self.state = 'grounded'   # grounded -> takeoff -> flying -> landing -> landed
         self.takeoff_delay = random.uniform(0, 2.0)
         self.landing_delay = random.uniform(0, 1.0)
 
-        from mesh_comms import create_genesis_block
-        self.ledger = [create_genesis_block()]
-        self.mission_data = {'target': None, 'status': 'active'}
+        # from mesh_comms import create_genesis_block
+        # self.ledger = [create_genesis_block()]
+        # self.mission_data = {'target': None, 'status': 'active'}
+
+        # new added 
+        from dag_ledger import DAGLedger
+        self.dag = DAGLedger()
+        self.mission_data = {'target': None, 'status' :'active' }
+        
         
         self.signal_strength = 100
         self.current_frequency = random.choice([1, 2, 3, 4, 5])
@@ -79,7 +92,9 @@ class Drone(Entity):
 
 
 
-    def move(self, dt):
+    # def move(self, dt):
+    def move(self, dt , wind_force=None):
+
         # --- Grounded: waiting for takeoff ---
         if self.state == 'grounded':
             self.takeoff_delay -= dt
@@ -138,8 +153,25 @@ class Drone(Entity):
             self.label.text = f"D{self.id} | LANDED"
             return
 
+
+        if self.gnss_denied:
+            wobble = Vec3(
+                random.uniform(-0.4, 0.4),
+                0,
+                random.uniform(-0.4, 0.4),
+            )
+            self.velocity += wobble
+
+
+
+
+
         # --- Flying: normal behavior ---
+
+        if wind_force is not None:
+            self.velocity += wind_force * dt
         self.position += self.velocity * dt
+
 
         half = GROUND_SIZE / 2
         if abs(self.x) > half:
@@ -150,7 +182,33 @@ class Drone(Entity):
         if self.velocity.length() > 0.01:
             self.look_at(self.position + self.velocity)
 
-        self.label.text = f"D{self.id} | {len(self.ledger)}blk"
+        # if self.velocity.length() > 0.01:
+        #     from ursina import lerp
+        #     target_rotation_y = math.degrees(math.atan2(self.velocity.x, self.velocity.z))
+        #     self.rotation_y = lerp(self.rotation_y, target_rotation_y, 6 * dt)
+
+
+
+        if self.gnss_denied:
+            drift = Vec3(
+                random.uniform(-GNSS_DRIFT_RATE, GNSS_DRIFT_RATE),
+                0,
+                random.uniform(-GNSS_DRIFT_RATE, GNSS_DRIFT_RATE),
+            )
+            self.estimated_position += self.velocity * dt + drift
+        else:
+            self.estimated_position = self.position
+
+
+
+
+
+
+        
+        
+
+
+        self.label.text = f"D{self.id} | {len(self.ledger)}blk | Bat:{int(self.battery)}%"
 
 
 

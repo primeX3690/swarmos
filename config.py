@@ -60,3 +60,28 @@ FREQUENCIES = [1, 2, 3, 4, 5]
 SIGNAL_DROP_RATE = 35      # per second jab jammer zone ke andar ho
 SIGNAL_RECOVERY_RATE = 25  # per second jab bahar ho
 HOP_SUCCESS_CHANCE = 0.6   # frequency hop ka chance safe channel milne ka
+
+
+
+# new added parameters for physics and battery management
+GRAVITY = 9.8
+WIND_STRENGTH = 1.5
+WIND_CHANGE_INTERVAL = 4.0
+BATTERY_DRAIN_RATE = 0.8       # % per second while flying
+BATTERY_LOW_THRESHOLD = 20     # neeche isse RTH trigger hoga
+SENSOR_NOISE_MAGNITUDE = 0.05
+
+
+
+RL_LEARNING_RATE = 0.1
+RL_DISCOUNT = 0.9
+RL_EXPLORATION_RATE = 0.2
+
+
+NETWORK_LATENCY_MIN = 0.1    # seconds
+NETWORK_LATENCY_MAX = 0.6
+PACKET_LOSS_CHANCE = 0.5    # 5% chance ki sync attempt fail ho jaaye
+
+
+
+GNSS_DRIFT_RATE = 0.03

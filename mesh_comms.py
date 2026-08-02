@@ -50,6 +50,14 @@ def sync_chains(drone_a, drone_b):
 
 
 
+def sync_dags(drone_a, drone_b):
+    """DAG-based mesh sync — dono drones apne DAGs merge karte hain,
+    isse consensus build hota hai (jitna zyada overlap utna trustworthy)."""
+    drone_a.dag.merge(drone_b.dag)
+    drone_b.dag.merge(drone_a.dag)        
+
+
+
 def validate_chain(chain):
     """Poori chain ki hash-integrity verify karta hai — agar koi block
     tamper hua hai (hash match nahi karta), chain invalid hai."""
@@ -63,18 +71,45 @@ def validate_chain(chain):
     return True
 
 
-def hacker_inject_fake_command(drone):
+# def hacker_inject_fake_command(drone):
+#     """
+#     Simulated hacker attack — ek corrupted/unauthorized block force-inject
+#     karta hai jiska hash intentionally mismatch karega, taaki mesh isse
+#     consensus se pakad sake.
+#     """
+#     last = drone.ledger[-1]
+#     fake_block = {
+#         'index': last['index'] + 1,
+#         'timestamp': 0,
+#         'event': 'UNAUTHORIZED_CMD',
+#         'prev_hash': last['hash'],
+#     }
+#     fake_block['hash'] = 'TAMPERED0000'  # jaan-bujh ke galat hash — real cheez detect karegi
+#     drone.ledger.append(fake_block)        
+
+
+
+
+
+def hacker_inject_fake_dag_node(drone):
     """
-    Simulated hacker attack — ek corrupted/unauthorized block force-inject
-    karta hai jiska hash intentionally mismatch karega, taaki mesh isse
-    consensus se pakad sake.
+    Simulated hacker attack — DAG mein ek corrupted node force-inject
+    karta hai jiska hash intentionally tamper hoga, taaki mesh
+    consensus-validation se isse pakad sake.
     """
-    last = drone.ledger[-1]
-    fake_block = {
-        'index': last['index'] + 1,
-        'timestamp': 0,
-        'event': 'UNAUTHORIZED_CMD',
-        'prev_hash': last['hash'],
-    }
-    fake_block['hash'] = 'TAMPERED0000'  # jaan-bujh ke galat hash — real cheez detect karegi
-    drone.ledger.append(fake_block)        
+    from dag_ledger import DAGNode
+
+    tips = list(drone.dag.tips)
+    parents = tips[:2] if len(tips) >= 2 else tips
+
+    fake_node = DAGNode(
+        index=max(n.index for n in drone.dag.nodes.values()) + 1,
+        event="UNAUTHORIZED_CMD",
+        parent_ids=parents,
+    )
+    fake_node.hash = "TAMPERED0000"   # jaan-bujh ke galat hash — validation se pakda jaayega
+
+    drone.dag.nodes[fake_node.id] = fake_node
+    for p in parents:
+        drone.dag.tips.discard(p)
+    drone.dag.tips.add(fake_node.id)
