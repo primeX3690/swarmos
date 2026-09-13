@@ -1,0 +1,272 @@
+{
+  "generated_at": "2026-09-13 10:23:23",
+  "runs_per_test": 20,
+  "results": {
+    "collision_avoidance": {
+      "collision_events": {
+        "mean": 1.4,
+        "stdev": 2.0622,
+        "min": 0,
+        "max": 7
+      },
+      "min_pairwise_distance": {
+        "mean": 0.4837,
+        "stdev": 0.1966,
+        "min": 0.112,
+        "max": 0.865
+      }
+    },
+    "formation_grid": {
+      "shape": [
+        "grid",
+        "grid",
+        "grid",
+        "grid",
+        "grid",
+        "grid",
+        "grid",
+        "grid",
+        "grid",
+        "grid",
+        "grid",
+        "grid",
+        "grid",
+        "grid",
+        "grid",
+        "grid",
+        "grid",
+        "grid",
+        "grid",
+        "grid"
+      ],
+      "mean_position_error": {
+        "mean": 0.0747,
+        "stdev": 0.0,
+        "min": 0.0747,
+        "max": 0.0747
+      },
+      "max_position_error": {
+        "mean": 0.1141,
+        "stdev": 0.0,
+        "min": 0.1141,
+        "max": 0.1141
+      }
+    },
+    "formation_circle": {
+      "shape": [
+        "circle",
+        "circle",
+        "circle",
+        "circle",
+        "circle",
+        "circle",
+        "circle",
+        "circle",
+        "circle",
+        "circle",
+        "circle",
+        "circle",
+        "circle",
+        "circle",
+        "circle",
+        "circle",
+        "circle",
+        "circle",
+        "circle",
+        "circle"
+      ],
+      "mean_position_error": {
+        "mean": 0.0823,
+        "stdev": 0.0,
+        "min": 0.0823,
+        "max": 0.0823
+      },
+      "max_position_error": {
+        "mean": 0.1179,
+        "stdev": 0.0,
+        "min": 0.1179,
+        "max": 0.1179
+      }
+    },
+    "formation_v": {
+      "shape": [
+        "v",
+        "v",
+        "v",
+        "v",
+        "v",
+        "v",
+        "v",
+        "v",
+        "v",
+        "v",
+        "v",
+        "v",
+        "v",
+        "v",
+        "v",
+        "v",
+        "v",
+        "v",
+        "v",
+        "v"
+      ],
+      "mean_position_error": {
+        "mean": 0.0835,
+        "stdev": 0.0,
+        "min": 0.0835,
+        "max": 0.0835
+      },
+      "max_position_error": {
+        "mean": 0.1643,
+        "stdev": 0.0,
+        "min": 0.1643,
+        "max": 0.1643
+      }
+    },
+    "formation_expanding_square": {
+      "shape": [
+        "expanding_square",
+        "expanding_square",
+        "expanding_square",
+        "expanding_square",
+        "expanding_square",
+        "expanding_square",
+        "expanding_square",
+        "expanding_square",
+        "expanding_square",
+        "expanding_square",
+        "expanding_square",
+        "expanding_square",
+        "expanding_square",
+        "expanding_square",
+        "expanding_square",
+        "expanding_square",
+        "expanding_square",
+        "expanding_square",
+        "expanding_square",
+        "expanding_square"
+      ],
+      "mean_position_error": {
+        "mean": 0.0843,
+        "stdev": 0.0,
+        "min": 0.0843,
+        "max": 0.0843
+      },
+      "max_position_error": {
+        "mean": 0.1684,
+        "stdev": 0.0,
+        "min": 0.1684,
+        "max": 0.1684
+      }
+    },
+    "obstacle_avoidance": {
+      "obstacle_penetrations": {
+        "mean": 1.6,
+        "stdev": 3.6187,
+        "min": 0,
+        "max": 11
+      },
+      "min_distance_to_obstacle": {
+        "mean": 3.4811,
+        "stdev": 1.299,
+        "min": 0.651,
+        "max": 7.222
+      }
+    },
+    "threat_flee": {
+      "drones_escaped": {
+        "mean": 15,
+        "stdev": 0.0,
+        "min": 15,
+        "max": 15
+      },
+      "total": {
+        "mean": 15,
+        "stdev": 0.0,
+        "min": 15,
+        "max": 15
+      },
+      "escape_rate": {
+        "mean": 1.0,
+        "stdev": 0.0,
+        "min": 1.0,
+        "max": 1.0
+      }
+    },
+    "threat_surround": {
+      "drones_in_ring_tolerance": {
+        "mean": 13.45,
+        "stdev": 1.4681,
+        "min": 10,
+        "max": 15
+      },
+      "total": {
+        "mean": 15,
+        "stdev": 0.0,
+        "min": 15,
+        "max": 15
+      },
+      "mean_ring_error": {
+        "mean": 0.2018,
+        "stdev": 0.0567,
+        "min": 0.119,
+        "max": 0.346
+      }
+    },
+    "fault_tolerance": {
+      "victim_events_before_loss": {
+        "mean": 6,
+        "stdev": 0.0,
+        "min": 6,
+        "max": 6
+      },
+      "nearest_survivor_events_after_sync": {
+        "mean": 12,
+        "stdev": 0.0,
+        "min": 12,
+        "max": 12
+      },
+      "mission_data_loss": {
+        "mean": 0,
+        "stdev": 0.0,
+        "min": 0,
+        "max": 0
+      }
+    },
+    "dag_tamper_detection": {
+      "nodes_that_received_tampered_data": {
+        "mean": 8,
+        "stdev": 0.0,
+        "min": 8,
+        "max": 8
+      },
+      "nodes_that_detected_tamper": {
+        "mean": 8,
+        "stdev": 0.0,
+        "min": 8,
+        "max": 8
+      },
+      "detection_rate": {
+        "mean": 1.0,
+        "stdev": 0.0,
+        "min": 1.0,
+        "max": 1.0
+      }
+    },
+    "mesh_sync_convergence": {
+      "rounds_to_full_consensus": {
+        "mean": 2,
+        "stdev": 0.0,
+        "min": 2,
+        "max": 2
+      },
+      "final_ledger_size": {
+        "mean": 30,
+        "stdev": 0.0,
+        "min": 30,
+        "max": 30
+      }
+    }
+  }
+}
