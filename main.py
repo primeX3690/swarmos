@@ -1,7 +1,7 @@
 from physics import WindField, apply_gravity_correction, apply_sensor_noise, drain_battery
 from config import WIND_CHANGE_INTERVAL, BATTERY_DRAIN_RATE, BATTERY_LOW_THRESHOLD
-from rl_agent import apply_rl_behavior
-from mesh_comms import sync_dags
+from adaptive_agent import apply_adaptive_behavior as apply_rl_behavior
+from dag_consensus import sync_dags_hardened as sync_dags
 from network_emulation import NetworkEmulator
 from config import NETWORK_LATENCY_MIN, NETWORK_LATENCY_MAX, PACKET_LOSS_CHANCE
 from boids import apply_stigmergy_avoidance
@@ -33,6 +33,14 @@ from threat import create_threat, flee_threat, surround_threat
 
 from mesh_comms import validate_chain, hacker_inject_fake_dag_node
 from jammer import create_jammer_zone, update_signal
+
+
+
+def sync_and_learn(drone_a, drone_b):
+    sync_dags(drone_a, drone_b)
+    if hasattr(drone_a, "adaptive_agent") and hasattr(drone_b, "adaptive_agent"):
+        drone_a.adaptive_agent.federate(drone_b.adaptive_agent, blend=0.3)
+
 
 
 
@@ -472,7 +480,7 @@ if heatmap_on:
 
 
 
-        network.process(sync_dags)
+        network.process(sync_and_learn)
         network_label.text = f"Network: {network.get_reliability_percent()}% reliable | Pending: {len(network.pending)}"        
 
         compromised_count = sum(1 for d in drones if d.compromised)
