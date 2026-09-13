@@ -55,8 +55,8 @@ class Drone(Entity):
         # self.mission_data = {'target': None, 'status': 'active'}
 
         # new added 
-        from dag_ledger import DAGLedger
-        self.dag = DAGLedger()
+        from dag_consensus import ConsensusDAGLedger
+        self.dag = ConsensusDAGLedger(owner_id=self.id)
         self.mission_data = {'target': None, 'status' :'active' }
         
         
