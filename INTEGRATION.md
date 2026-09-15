@@ -115,3 +115,42 @@ seekh leta hai.
 3. `adaptive_agent.py` + federation — thoda zyada testing maangega
    (RL reward tuning), lekin yeh wahi hai jo README ke roadmap mein
    "onboard adaptive intelligence" kehta hai
+
+---
+
+## 4. PX4 SITL Emulation Layer (px4_drone.py) - Hardware-in-Loop Validation
+
+SwarmOS ab sirf Ursina simulation tak limited nahi hai - poora core coordination stack ab asli PX4 flight-controller software (SITL, Simulation-In-Hardware mode) ke against verify ho chuka hai, headless, CPU-only laptop pe (Ryzen 3 / 8GB RAM).
+
+### Kaise kaam karta hai
+
+px4_drone.py ek naya drone-adapter hai jo mock_drone.py ka exact interface match karta hai (id, position, velocity, move(), look_at(), dag, mission_data, compromised). Farak sirf itna hai:
+
+- position background MAVLink telemetry thread se live update hoti hai (LOCAL_POSITION_NED) - asli PX4 physics se
+- velocity jab boids/formation/threat/obstacle set karte hain, move() usse MAVLink OFFBOARD velocity setpoint bana ke seedha PX4 ko bhej deta hai
+
+Isi duck-typing ki wajah se boids.py, formation.py, threat.py, obstacle.py, dag_consensus.py - in sabki ek bhi line change nahi karni padi.
+
+### Setup (multi-instance, RAM-friendly)
+
+Gazebo/jMAVSim ki jagah PX4 ka built-in SIH (Simulation-In-Hardware) simulator use hota hai - koi external simulator process nahi, koi Java/Gazebo dependency nahi, poora headless.
+
+Build: make px4_sitl_sih sihsim_quadx
+
+Multiple drones (3 tested) - PX4 ka -i N instance flag, har instance apne aap 14540+N MAVLink port use karta hai.
+
+### Validated (3 real PX4 SITL instances pe)
+
+| Module | Test | Result |
+|---|---|---|
+| boids.py | apply_boids_rules flocking | Confirmed |
+| formation.py | V-formation convergence | Confirmed |
+| threat.py | flee_threat safe-distance maintain | Confirmed |
+| obstacle.py | avoid_obstacle no-collision | Confirmed |
+| dag_consensus.py | sync_dags_hardened mesh convergence | Confirmed - All synced True |
+
+Runner: main_emulation.py - do phases mein: Phase 1 = Mode A (boids + threat + obstacle + DAG sync ek saath), Phase 2 = V-formation switch.
+
+### Kyun important hai
+
+Ab tak SwarmOS ka evidence sirf Ursina simulation tha. Ab jawab hai: haan, bina ek line coordination-logic change kiye, asli PX4 (jo real drones mein production use hota hai) ke saath bhi. Yeh hardware-in-loop se real hardware tak jaane ka gap kaafi chhota kar deta hai.
